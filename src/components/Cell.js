@@ -5,4 +5,4 @@ const Cell = ({ type }) => (
 )
 
 
-export default Cell
+export default Cell;
