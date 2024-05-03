@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 
-import { createStage } from '../gameHelpers';
+import { createStage, checkCollision } from '../gameHelpers';
 
 // Styled Components
 import { StyledTetrisWrapper, StyledTetris } from './styles/StyledTetris';
@@ -8,6 +8,7 @@ import { StyledTetrisWrapper, StyledTetris } from './styles/StyledTetris';
 // Custom Hooks
 import { usePlayer } from '../hooks/usePlayer';
 import { useStage } from '../hooks/useStage';
+import { useInterval } from '../hooks/useInterval'; // Dodane
 
 // Components
 import Stage from './Stage';
@@ -32,11 +33,41 @@ const Tetris = () => {
     // Reset everything
     setStage(createStage());
     resetPlayer();
+    setGameOver(false);
+    setDropTime(1000); 
   }
 
   const drop = () => {
-    updatePlayerPos({ x: 0, y: 1, collided: false })
-  }
+    // Sprawdź kolizję, jeśli jest, ustaw gameOver na true
+    if (!checkCollision(player, stage, { x: 0, y: 1 })) {
+      updatePlayerPos({ x: 0, y: 1, collided: false });
+    } else {
+      // Jeśli klocek zderzył się, zakończ grę
+      if (player.pos.y < 1) {
+        console.log("GAME OVER");
+        setGameOver(true);
+        setDropTime(null);
+      }
+      // Dodaj aktualny klocek do planszy i wylosuj nowy klocek
+      const newStage = stage.map(row =>
+        row.map(cell =>
+          cell[1] === 'clear' ? [0, 'clear'] : cell
+        )
+      );
+      player.tetromino.forEach((row, y) => {
+        row.forEach((value, x) => {
+          if (value !== 0) {
+            newStage[y + player.pos.y][x + player.pos.x] = [
+              value,
+              `${player.collided ? 'merged' : 'clear'}`,
+            ];
+          }
+        });
+      });
+      setStage(newStage);
+      resetPlayer();
+    }
+  };
 
   const dropPlayer = () => {
     drop();
@@ -53,6 +84,11 @@ const Tetris = () => {
       }
     }
   }
+
+  // Dodaj interwał czasowy do automatycznego opadania klocka
+  useInterval(() => {
+    drop();
+  }, dropTime);
 
   return (
     <StyledTetrisWrapper role="button" tabIndex="0" onKeyDown={e => move(e)}>
